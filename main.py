@@ -1,35 +1,29 @@
 import argparse
 
 from analyzer import most_active_authors, commit_messages
-from models import Commit
+from storage import load_commits_from_file
+from github_api import fetch_commits
 
 
 def main():
 
     parser = argparse.ArgumentParser(description="Analyze commit stats")
 
-    parser.add_argument(
-        "--top",
-        type=int,
-        default=3,
-        help="Number of top contributors to show",
-    )
-
-    parser.add_argument(
-        "--author",
-        type=str,
-        help="Filter commits by author",
-    )
+    parser.add_argument("--top", type=int, default=3)
+    parser.add_argument("--author", type=str)
+    parser.add_argument("--file", type=str, default="commits.json")
+    parser.add_argument("--repo", type=str)
 
     args = parser.parse_args()
 
-    commits = [
-        Commit("Sasha", "Initial commit"),
-        Commit("Bob", "Bug fix"),
-        Commit("Daniel", "Says help"),
-        Commit("Sasha", "Pro max"),
-    ]
+    # Decide source of commits
+    if args.repo:
+        owner, repo = args.repo.split("/")
+        commits = fetch_commits(owner, repo)
+    else:
+        commits = load_commits_from_file(args.file)
 
+    # Analyze contributors
     top = most_active_authors(commits, args.top)
 
     print("Top contributors:")
@@ -37,7 +31,7 @@ def main():
     for author, count in top:
         print(author, count)
 
-    # Determine which authors we want messages for
+    # Determine authors to filter
     if args.author:
         authors = [args.author]
     else:
